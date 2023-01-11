@@ -1,0 +1,74 @@
+﻿@model RegisterAndLoginApp.Models.UserModel
+
+<h4>Please login</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="ProcessLogin">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+          
+            <div class="form-group">
+                <label asp-for="Login" class="control-label"></label>
+                <input asp-for="Login" class="form-control" />
+                <span asp-validation-for="Login" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Password" class="control-label"></label>
+                <input asp-for="Password" class="form-control" type="password"/>
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Login" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.js"></script>
+<script>
+    let token;      // токен
+    let username;   // имя пользователя
+    const hubConnection = new signalR.HubConnectionBuilder()
+        .withUrl("/messenger", { accessTokenFactory: () => token })
+        .build();
+
+    // аутентификация
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+
+        // отправляем запрос на аутентификацию
+        // посылаем запрос на адрес "/login", в ответ получим токен и имя пользователя
+        const response = await fetch("/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                email: document.getElementById("email").value,
+                password: document.getElementById("password").value
+            })
+        });
+
+        // если запрос прошел нормально
+        if (response.ok === true) {
+            // получаем данные
+            const data = await response.json();
+            token = data.access_token;
+            username = data.username;
+            document.getElementById("loginBtn").disabled = true;
+
+            hubConnection.start()       // начинаем соединение с хабом
+                .then(() => document.getElementById("sendBtn").disabled = false)
+                .catch(err => console.error(err.toString()));
+        }
+        else {
+            // если произошла ошибка, получаем код статуса
+            console.log(`Status: ${response.status}`);
+        }
+    });
+
+    
+</script>
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
